@@ -339,18 +339,11 @@ class Color {
 	let depthStartColor = new Color(0x55, 0x44, 0x00);
 	let depthEndColor = new Color(0x11, 0x99, 0x00);
 	function drawMaze() {
-		let w = maze.w;
-		let h = maze.h;
-		cvs.width = w * cellWidth + 2 * border;
-		cvs.height = h * cellWidth + 2 * border;
 		let ctx = cvs.getContext('2d');
-		ctx.lineJoin = 'round';
-		ctx.lineWidth = lineWidth;
-		ctx.strokeStyle = lineColor;
 		ctx.fillStyle = listCellColor[0];
 		ctx.fillRect(0, 0, cvs.width, cvs.height);
-		for (let y = 1; y <= h; y += 1) {
-			for (let x = 1; x <= w; x += 1) {
+		for (let y = 1; y <= maze.h; y += 1) {
+			for (let x = 1; x <= maze.w; x += 1) {
 				let point = maze.gridPoint[y][x];
 				if (point.depth != 0 && inputDepth.checked) {
 					ctx.fillStyle = depthStartColor.mix(depthEndColor, point.depth);
@@ -367,6 +360,12 @@ class Color {
 		let h = inputH.value | 0;
 		if (w > 0 && h > 0) {
 			maze = createRandomMaze(w, h);
+			cvs.width = w * cellWidth + 2 * border;
+			cvs.height = h * cellWidth + 2 * border;
+			let ctx = cvs.getContext('2d');
+			ctx.lineJoin = 'round';
+			ctx.lineWidth = lineWidth;
+			ctx.strokeStyle = lineColor;
 			drawMaze();
 		};
 		return;
@@ -378,7 +377,7 @@ class Color {
 		return;
 	};
 	cvs.onmousemove = function (ev) {
-		if (cvs.matches(':active')) {
+		if (maze != null && cvs.matches(':active')) {
 			let ctx = cvs.getContext('2d');
 			ctx.beginPath();
 			ctx.moveTo(lineX, lineY);
