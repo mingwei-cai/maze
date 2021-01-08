@@ -2,6 +2,7 @@ class Point {
 	x = 0;
 	y = 0;
 	cell = 0;
+	depth = 0;
 	size = 0;
 	/** @type {Point} */
 	wall = null;
@@ -32,6 +33,7 @@ class Point {
 		this.x = x;
 		this.y = y;
 		this.cell = 1;
+		this.depth = 0;
 		this.size = 1;
 		this.wall = this;
 	};
@@ -160,12 +162,14 @@ function findEndPoint(maze, x, y, fillCell) {
 	/** @type {Point[]} */
 	let listPoint = null;
 	let listNewPoint = [point];
+	let depth = 0;
 	while (listNewPoint.length != 0) {
 		listPoint = listNewPoint;
 		listNewPoint = [];
 		for (point of listPoint) {
 			x = point.x;
 			y = point.y;
+			point.depth = depth;
 			if (x != 1) {
 				let newPoint = maze.gridPoint[y][x - 1];
 				if (newPoint.cell == cell) {
@@ -195,8 +199,60 @@ function findEndPoint(maze, x, y, fillCell) {
 				};
 			};
 		};
+		depth += 1;
 	};
 	return listPoint[Math.floor(Math.random() * listPoint.length)];
+};
+
+/** @type {(maze: Maze, x: number, y: number, fillCell: number) => void} */
+function setDepth(maze, x, y, fillCell) {
+	let point = maze.gridPoint[y][x];
+	let cell = point.cell;
+	point.cell = fillCell;
+	/** @type {Point[]} */
+	let listPoint = null;
+	let listNewPoint = [point];
+	let depth = 0;
+	let pathLength = point.depth;
+	while (listNewPoint.length != 0) {
+		listPoint = listNewPoint;
+		listNewPoint = [];
+		for (point of listPoint) {
+			x = point.x;
+			y = point.y;
+			point.depth = (point.depth + depth - pathLength) / pathLength;
+			if (x != 1) {
+				let newPoint = maze.gridPoint[y][x - 1];
+				if (newPoint.cell == cell) {
+					newPoint.cell = fillCell;
+					listNewPoint.push(newPoint);
+				};
+			};
+			if (x != maze.w) {
+				let newPoint = maze.gridPoint[y][x + 1];
+				if (newPoint.cell == cell) {
+					newPoint.cell = fillCell;
+					listNewPoint.push(newPoint);
+				};
+			};
+			if (y != 1) {
+				let newPoint = maze.gridPoint[y - 1][x];
+				if (newPoint.cell == cell) {
+					newPoint.cell = fillCell;
+					listNewPoint.push(newPoint);
+				};
+			};
+			if (y != maze.h) {
+				let newPoint = maze.gridPoint[y + 1][x];
+				if (newPoint.cell == cell) {
+					newPoint.cell = fillCell;
+					listNewPoint.push(newPoint);
+				};
+			};
+		};
+		depth += 1;
+	};
+	return;
 };
 
 /** @type {(w: number, h: number) => Maze} */
@@ -222,47 +278,104 @@ function createRandomMaze(w, h) {
 		};
 	};
 	let endPoint = findEndPoint(maze, maze.gridPoint[1][1].cell != 0 ? 1 : 2, 1, 2);
-	let startPoint = findEndPoint(maze, endPoint.x, endPoint.y, 1);
+	let startPoint = findEndPoint(maze, endPoint.x, endPoint.y, 3);
+	setDepth(maze, startPoint.x, startPoint.y, 1);
 	startPoint.cell = 2;
 	endPoint.cell = 2;
 	return maze;
 };
 
+class Color {
+	r = 0;
+	g = 0;
+	b = 0;
+	/** @type {(color: Color, ratio: number) => Color} */
+	mix(color, ratio) {
+		return new Color(
+			this.r + (color.r - this.r) * ratio,
+			this.g + (color.g - this.g) * ratio,
+			this.b + (color.b - this.b) * ratio,
+		);
+	};
+	toString() {
+		return 'rgb(' + [
+			Math.round(this.r),
+			Math.round(this.g),
+			Math.round(this.b),
+		] + ')';
+	};
+	/** @type {(r: number, g: number, b: number)} */
+	constructor(r, g, b) {
+		this.r = r;
+		this.g = g;
+		this.b = b;
+	};
+};
+
 !function () {
-	let border = 20;
-	let cellColor = ['#330', '#090', '#FCF'];
-	let cellWidth = 20;
-	let lineColor = '#FF0';
-	let lineWidth = 5;
-	let lineX = 0;
-	let lineY = 0;
 	/** @type {HTMLInputElement} */
 	let inputW = document.getElementById('input-w');
 	/** @type {HTMLInputElement} */
 	let inputH = document.getElementById('input-h');
 	/** @type {HTMLButtonElement} */
 	let btn = document.getElementById('button-create');
+	/** @type {HTMLInputElement} */
+	let inputDepth = document.getElementById('input-depth');
 	/** @type {HTMLCanvasElement} */
 	let cvs = document.getElementById('canvas-maze');
+	/** @type {Maze} */
+	let maze = null;
+	let border = 20;
+	let listCellColor = [
+		new Color(0x00, 0x00, 0x00),
+		new Color(0x77, 0x66, 0x33),
+		new Color(0x00, 0x99, 0xFF),
+	];
+	let cellWidth = 20;
+	let lineColor = new Color(0xFF, 0x66, 0xFF);
+	let lineWidth = 5;
+	let lineX = 0;
+	let lineY = 0;
+	let isShowDepth = inputDepth.checked;
+	let depthStartColor = new Color(0x55, 0x44, 0x00);
+	let depthEndColor = new Color(0x11, 0x99, 0x00);
+	function drawMaze() {
+		let w = maze.w;
+		let h = maze.h;
+		cvs.width = w * cellWidth + 2 * border;
+		cvs.height = h * cellWidth + 2 * border;
+		let ctx = cvs.getContext('2d');
+		ctx.lineJoin = 'round';
+		ctx.lineWidth = lineWidth;
+		ctx.strokeStyle = lineColor;
+		ctx.fillStyle = listCellColor[0];
+		ctx.fillRect(0, 0, cvs.width, cvs.height);
+		for (let y = 1; y <= h; y += 1) {
+			for (let x = 1; x <= w; x += 1) {
+				let point = maze.gridPoint[y][x];
+				if (isShowDepth && point.depth != 0) {
+					ctx.fillStyle = depthStartColor.mix(depthEndColor, point.depth);
+				} else {
+					ctx.fillStyle = listCellColor[point.cell];
+				};
+				ctx.fillRect(border + (x - 1) * cellWidth, border + (y - 1) * cellWidth, cellWidth, cellWidth);
+			};
+		};
+		return;
+	};
 	btn.onclick = function (ev) {
 		let w = inputW.value | 0;
 		let h = inputH.value | 0;
 		if (w > 0 && h > 0) {
-			let maze = createRandomMaze(w, h);
-			cvs.width = w * cellWidth + 2 * border;
-			cvs.height = h * cellWidth + 2 * border;
-			let ctx = cvs.getContext('2d');
-			ctx.lineJoin = 'round';
-			ctx.lineWidth = lineWidth;
-			ctx.strokeStyle = lineColor;
-			ctx.fillStyle = cellColor[0];
-			ctx.fillRect(0, 0, cvs.width, cvs.height);
-			for (let y = 1; y <= h; y += 1) {
-				for (let x = 1; x <= w; x += 1) {
-					ctx.fillStyle = cellColor[maze.gridPoint[y][x].cell];
-					ctx.fillRect(border + (x - 1) * cellWidth, border + (y - 1) * cellWidth, cellWidth, cellWidth);
-				};
-			};
+			maze = createRandomMaze(w, h);
+			drawMaze();
+		};
+		return;
+	};
+	inputDepth.onchange = function (ev) {
+		isShowDepth = inputDepth.checked;
+		if (maze != null) {
+			drawMaze();
 		};
 		return;
 	};
