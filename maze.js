@@ -6,6 +6,15 @@ class Point {
 	size = 0;
 	/** @type {Point} */
 	wall = null;
+	/** @type {(x: number, y: number)} */
+	constructor(x, y) {
+		this.x = x;
+		this.y = y;
+		this.cell = 1;
+		this.depth = 0;
+		this.size = 1;
+		this.wall = this;
+	};
 	/** @type {() => Point} */
 	getWall() {
 		if (this.wall != this.wall.wall) {
@@ -27,15 +36,6 @@ class Point {
 			};
 		};
 		return;
-	};
-	/** @type {(x: number, y: number)} */
-	constructor(x, y) {
-		this.x = x;
-		this.y = y;
-		this.cell = 1;
-		this.depth = 0;
-		this.size = 1;
-		this.wall = this;
 	};
 };
 
@@ -289,6 +289,12 @@ class Color {
 	r = 0;
 	g = 0;
 	b = 0;
+	/** @type {(r: number, g: number, b: number)} */
+	constructor(r, g, b) {
+		this.r = r;
+		this.g = g;
+		this.b = b;
+	};
 	/** @type {(color: Color, ratio: number) => Color} */
 	mix(color, ratio) {
 		return new Color(
@@ -303,12 +309,6 @@ class Color {
 			Math.round(this.g),
 			Math.round(this.b),
 		] + ')';
-	};
-	/** @type {(r: number, g: number, b: number)} */
-	constructor(r, g, b) {
-		this.r = r;
-		this.g = g;
-		this.b = b;
 	};
 };
 
@@ -336,7 +336,6 @@ class Color {
 	let lineWidth = 5;
 	let lineX = 0;
 	let lineY = 0;
-	let isShowDepth = inputDepth.checked;
 	let depthStartColor = new Color(0x55, 0x44, 0x00);
 	let depthEndColor = new Color(0x11, 0x99, 0x00);
 	function drawMaze() {
@@ -353,7 +352,7 @@ class Color {
 		for (let y = 1; y <= h; y += 1) {
 			for (let x = 1; x <= w; x += 1) {
 				let point = maze.gridPoint[y][x];
-				if (isShowDepth && point.depth != 0) {
+				if (point.depth != 0 && inputDepth.checked) {
 					ctx.fillStyle = depthStartColor.mix(depthEndColor, point.depth);
 				} else {
 					ctx.fillStyle = listCellColor[point.cell];
@@ -373,7 +372,6 @@ class Color {
 		return;
 	};
 	inputDepth.onchange = function (ev) {
-		isShowDepth = inputDepth.checked;
 		if (maze != null) {
 			drawMaze();
 		};
